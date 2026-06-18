@@ -59,20 +59,21 @@
   <p class="sub">여러 명에게 단체 메일이 아니라 개인 메일을 따로따로 보냅니다. 받는 사람끼리 서로의 주소가 보이지 않습니다.</p>
 
   <div class="notice">
-    <strong>준비물 — Gmail 앱 비밀번호</strong><br>
-    일반 비밀번호가 아닌 16자리 앱 비밀번호가 필요합니다.
-    2단계 인증을 켠 뒤 <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">앱 비밀번호 발급 페이지</a>에서 생성하세요.
+    <strong>준비물 — Brevo 무료 계정 (하루 300통)</strong><br>
+    <a href="https://www.brevo.com" target="_blank" rel="noopener">Brevo 가입</a> 후 두 가지가 필요합니다:<br>
+    ① <strong>발신자 인증</strong>: Settings → Senders → 발신 이메일 추가 → 받은 인증 메일 클릭<br>
+    ② <strong>API 키</strong>: Settings → SMTP &amp; API → API Keys → Generate → 복사
   </div>
 
   <fieldset>
-    <legend>1. 보내는 사람 (Gmail 계정)</legend>
-    <label>Gmail 주소</label>
-    <input type="email" id="sender" placeholder="example@gmail.com" autocomplete="username">
-    <label>앱 비밀번호</label>
+    <legend>1. 보내는 사람 (Brevo)</legend>
+    <label>Brevo API 키</label>
     <div class="row">
-      <input type="password" id="password" placeholder="16자리 앱 비밀번호" autocomplete="off">
+      <input type="password" id="apikey" placeholder="xkeysib-..." autocomplete="off">
       <span class="pw-toggle" id="pwToggle">표시</span>
     </div>
+    <label>발신자 이메일 <span class="muted">— Brevo에서 인증한 주소</span></label>
+    <input type="email" id="sender" placeholder="me@mydomain.com" autocomplete="username">
     <label>보내는 이름 <span class="muted">(선택)</span></label>
     <input type="text" id="fromName" placeholder="예: 콜드 팀">
   </fieldset>
@@ -144,7 +145,7 @@ function parseEmails(raw) {
 
 /* 비밀번호 표시 */
 $("pwToggle").onclick = () => {
-  const p = $("password");
+  const p = $("apikey");
   if (p.type === "password") { p.type = "text"; $("pwToggle").textContent = "숨김"; }
   else { p.type = "password"; $("pwToggle").textContent = "표시"; }
 };
@@ -247,13 +248,13 @@ function logLine(html, cls) {
 
 /* ===== 발송 ===== */
 $("sendBtn").onclick = async () => {
+  const apikey = $("apikey").value.trim();
   const sender = $("sender").value.trim();
-  const password = $("password").value;
   const emails = parseEmails($("recipients").value);
   const bodyHtml = editor.innerHTML.trim();
 
-  if (!sender) return alert("Gmail 주소를 입력하세요.");
-  if (!password) return alert("앱 비밀번호를 입력하세요.");
+  if (!apikey) return alert("Brevo API 키를 입력하세요.");
+  if (!sender) return alert("발신자 이메일을 입력하세요. (Brevo에서 인증한 주소)");
   if (emails.length === 0) return alert("받는 사람이 없습니다.");
 
   let totalBytes = attachedFiles.reduce((s, f) => s + f.size, 0);
@@ -264,8 +265,8 @@ $("sendBtn").onclick = async () => {
   localStorage.setItem(SIG_KEY, $("signature").value);
 
   const fd = new FormData();
+  fd.append("api_key", apikey);
   fd.append("sender", sender);
-  fd.append("password", password);
   fd.append("from_name", $("fromName").value);
   fd.append("subject", $("subject").value);
   fd.append("body_html", bodyHtml);
