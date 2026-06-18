@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gmail 개별 발송</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: #f4f4f5; color: #18181b; margin: 0; padding: 24px 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: #71717a; font-size: 14px; margin: 0 0 20px; }
+  fieldset { border: 1px solid #e4e4e7; border-radius: 12px; padding: 16px; margin: 0 0 16px; background: #fff; }
+  legend { font-size: 13px; color: #71717a; padding: 0 6px; font-weight: 500; }
+  label { display: block; font-size: 13px; color: #52525b; margin: 8px 0 4px; }
+  input[type=text], input[type=email], input[type=password], textarea, input[type=number] {
+    width: 100%; padding: 9px 11px; font-size: 14px; font-family: inherit;
+    border: 1px solid #d4d4d8; border-radius: 8px; background: #fff; color: #18181b;
+  }
+  input:focus, textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+  textarea { resize: vertical; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > input { flex: 1; }
+  .muted { color: #a1a1aa; }
+  .pw-toggle { font-size: 13px; color: #6366f1; cursor: pointer; white-space: nowrap; user-select: none; }
+  button.send { width: 100%; padding: 13px; font-size: 15px; font-weight: 600; color: #fff; background: #4f46e5; border: none; border-radius: 10px; cursor: pointer; }
+  button.send:hover { background: #4338ca; }
+  button.send:disabled { background: #a5b4fc; cursor: not-allowed; }
+  .btn-small { padding: 7px 12px; font-size: 13px; border: 1px solid #d4d4d8; border-radius: 8px; background: #fff; cursor: pointer; color: #3f3f46; }
+  .btn-small:hover { background: #f4f4f5; }
+  .count { font-size: 13px; color: #4f46e5; margin-left: 8px; }
+  .bar { height: 8px; border-radius: 4px; background: #e4e4e7; overflow: hidden; margin: 14px 0 10px; }
+  .bar > span { display: block; height: 100%; width: 0; background: #16a34a; transition: width .2s; }
+  .log { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px; max-height: 220px; overflow-y: auto; white-space: pre-wrap; line-height: 1.7; }
+  .ok { color: #16a34a; } .fail { color: #dc2626; }
+  .notice { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 13px; padding: 10px 12px; border-radius: 8px; margin: 0 0 16px; }
+  .notice a { color: #92400e; }
+  .grid2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  /* 서식 편집기 */
+  .toolbar { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; padding: 6px; border: 1px solid #d4d4d8; border-bottom: none; border-radius: 8px 8px 0 0; background: #f9fafb; }
+  .tbtn { min-width: 32px; height: 30px; padding: 0 8px; font-size: 13px; border: 1px solid #d4d4d8; border-radius: 6px; background: #fff; cursor: pointer; color: #3f3f46; }
+  .tbtn:hover { background: #eef2ff; border-color: #6366f1; }
+  .tbtn b { font-weight: 700; } .tbtn i { font-style: italic; } .tbtn u { text-decoration: underline; }
+  .editor { min-height: 160px; padding: 11px; font-size: 14px; border: 1px solid #d4d4d8; border-radius: 0 0 8px 8px; background: #fff; overflow-y: auto; }
+  .editor:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+  .editor a { color: #1a73e8; }
+  .filelist { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .fileitem { display: flex; align-items: center; justify-content: space-between; font-size: 13px; padding: 6px 10px; background: #f4f4f5; border-radius: 6px; }
+  .fileitem .x { cursor: pointer; color: #dc2626; padding: 0 4px; }
+  .sep { width: 1px; height: 20px; background: #d4d4d8; margin: 0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Gmail 개별 발송</h1>
+  <p class="sub">여러 명에게 단체 메일이 아니라 개인 메일을 따로따로 보냅니다. 받는 사람끼리 서로의 주소가 보이지 않습니다.</p>
+
+  <div class="notice">
+    <strong>준비물 — Gmail 앱 비밀번호</strong><br>
+    일반 비밀번호가 아닌 16자리 앱 비밀번호가 필요합니다.
+    2단계 인증을 켠 뒤 <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">앱 비밀번호 발급 페이지</a>에서 생성하세요.
+  </div>
+
+  <fieldset>
+    <legend>1. 보내는 사람 (Gmail 계정)</legend>
+    <label>Gmail 주소</label>
+    <input type="email" id="sender" placeholder="example@gmail.com" autocomplete="username">
+    <label>앱 비밀번호</label>
+    <div class="row">
+      <input type="password" id="password" placeholder="16자리 앱 비밀번호" autocomplete="off">
+      <span class="pw-toggle" id="pwToggle">표시</span>
+    </div>
+    <label>보내는 이름 <span class="muted">(선택)</span></label>
+    <input type="text" id="fromName" placeholder="예: 콜드 팀">
+  </fieldset>
+
+  <fieldset>
+    <legend>2. 받는 사람 (한 줄에 하나씩 또는 쉼표로 구분)</legend>
+    <textarea id="recipients" rows="5" placeholder="hong@example.com&#10;kim@example.com&#10;lee@example.com"></textarea>
+    <div class="grid2" style="margin-top:8px;">
+      <button class="btn-small" id="countBtn">개수 확인</button>
+      <span class="count" id="count"></span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>3. 메일 내용</legend>
+    <label>제목</label>
+    <input type="text" id="subject" placeholder="메일 제목">
+
+    <label>본문 <span class="muted">— 서식·링크·드라이브 링크를 넣을 수 있습니다</span></label>
+    <div class="toolbar">
+      <button type="button" class="tbtn" data-cmd="bold" title="굵게"><b>B</b></button>
+      <button type="button" class="tbtn" data-cmd="italic" title="기울임"><i>I</i></button>
+      <button type="button" class="tbtn" data-cmd="underline" title="밑줄"><u>U</u></button>
+      <span class="sep"></span>
+      <button type="button" class="tbtn" id="colorBtn" title="글자 색">색</button>
+      <input type="color" id="colorPicker" value="#1a73e8" style="display:none;">
+      <button type="button" class="tbtn" data-cmd="insertUnorderedList" title="목록">• 목록</button>
+      <span class="sep"></span>
+      <button type="button" class="tbtn" id="linkBtn" title="링크 삽입">🔗 링크</button>
+      <button type="button" class="tbtn" id="driveBtn" title="구글 드라이브 링크">▤ 드라이브</button>
+    </div>
+    <div class="editor" id="editor" contenteditable="true" data-ph="메일 내용을 입력하세요."></div>
+
+    <label style="margin-top:12px;">첨부파일 <span class="muted">— PC 파일 첨부 (총 25MB 이하). 큰 파일은 드라이브 링크 권장</span></label>
+    <div class="grid2">
+      <button class="btn-small" id="addFileBtn">파일 선택</button>
+      <span class="count" id="fileTotal"></span>
+    </div>
+    <input type="file" id="fileInput" multiple style="display:none;">
+    <div class="filelist" id="fileList"></div>
+
+    <label style="margin-top:12px;">서명 <span class="muted">— 한 번 입력하면 자동 저장. 모든 메일 끝에 붙습니다.</span></label>
+    <textarea id="signature" rows="3" placeholder="홍길동&#10;콜드 팀 | 010-1234-5678&#10;hong@example.com"></textarea>
+    <div class="grid2" style="margin-top:6px;">
+      <button class="btn-small" id="saveSigBtn">서명 저장</button>
+      <button class="btn-small" id="clearSigBtn">서명 지우기</button>
+      <span class="count" id="sigStatus"></span>
+    </div>
+
+    <label style="margin-top:12px;">발송 간격 (초) <span class="muted">— 너무 빠르면 Gmail이 차단할 수 있습니다</span></label>
+    <input type="number" id="delay" value="1.0" min="0" max="10" step="0.5" style="width:90px;">
+  </fieldset>
+
+  <button class="send" id="sendBtn">개별 발송 시작</button>
+  <div class="bar"><span id="barFill"></span></div>
+  <div class="log" id="log"><span class="muted">진행 상황이 여기에 표시됩니다.</span></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const EMAIL_RE = /[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g;
+const escHtml = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const escAttr = s => s.replace(/"/g, '&quot;');
+
+function parseEmails(raw) {
+  const found = (raw.match(EMAIL_RE) || []);
+  return [...new Set(found.map(e => e.toLowerCase()))];
+}
+
+/* 비밀번호 표시 */
+$("pwToggle").onclick = () => {
+  const p = $("password");
+  if (p.type === "password") { p.type = "text"; $("pwToggle").textContent = "숨김"; }
+  else { p.type = "password"; $("pwToggle").textContent = "표시"; }
+};
+
+/* 받는 사람 개수 */
+$("countBtn").onclick = () => {
+  $("count").textContent = `유효 이메일 ${parseEmails($("recipients").value).length}개`;
+};
+
+/* ===== 서식 편집기 ===== */
+const editor = $("editor");
+let savedRange = null;
+function saveSel() {
+  const s = window.getSelection();
+  if (s.rangeCount > 0 && editor.contains(s.anchorNode)) savedRange = s.getRangeAt(0);
+}
+function restoreSel() {
+  editor.focus();
+  if (savedRange) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+}
+editor.addEventListener("keyup", saveSel);
+editor.addEventListener("mouseup", saveSel);
+editor.addEventListener("blur", saveSel);
+
+function exec(cmd, val = null) { restoreSel(); document.execCommand(cmd, false, val); saveSel(); }
+function insertHtml(html) { restoreSel(); document.execCommand("insertHTML", false, html); saveSel(); }
+
+document.querySelectorAll(".tbtn[data-cmd]").forEach(btn => {
+  btn.onclick = () => exec(btn.dataset.cmd);
+});
+
+$("colorBtn").onclick = () => $("colorPicker").click();
+$("colorPicker").oninput = e => exec("foreColor", e.target.value);
+
+$("linkBtn").onclick = () => {
+  const url = prompt("링크 주소(URL)를 입력하세요:", "https://");
+  if (!url) return;
+  const selected = savedRange ? savedRange.toString() : "";
+  if (selected) {
+    exec("createLink", url);
+  } else {
+    const text = prompt("표시할 텍스트:", url) || url;
+    insertHtml(`<a href="${escAttr(url)}">${escHtml(text)}</a>&nbsp;`);
+  }
+};
+
+$("driveBtn").onclick = () => {
+  const url = prompt("구글 드라이브 공유 링크를 붙여넣으세요:\n(드라이브에서 '링크 복사'로 받은 주소)", "https://drive.google.com/");
+  if (!url) return;
+  const label = prompt("버튼에 표시할 이름:", "구글 드라이브 파일 열기") || "구글 드라이브 파일 열기";
+  const btn = `<a href="${escAttr(url)}" style="display:inline-block;padding:9px 16px;background:#1a73e8;color:#ffffff;text-decoration:none;border-radius:6px;font-family:sans-serif;font-size:14px;">▤ ${escHtml(label)}</a>`;
+  insertHtml(btn + "&nbsp;");
+};
+
+/* ===== 첨부파일 ===== */
+let attachedFiles = [];
+$("addFileBtn").onclick = () => $("fileInput").click();
+$("fileInput").addEventListener("change", e => {
+  for (const f of e.target.files) attachedFiles.push(f);
+  e.target.value = "";
+  renderFiles();
+});
+function renderFiles() {
+  const list = $("fileList");
+  list.innerHTML = "";
+  let total = 0;
+  attachedFiles.forEach((f, idx) => {
+    total += f.size;
+    const div = document.createElement("div");
+    div.className = "fileitem";
+    div.innerHTML = `<span>${escHtml(f.name)} <span class="muted">(${(f.size/1024).toFixed(0)}KB)</span></span>`;
+    const x = document.createElement("span");
+    x.className = "x"; x.textContent = "✕ 삭제";
+    x.onclick = () => { attachedFiles.splice(idx, 1); renderFiles(); };
+    div.appendChild(x);
+    list.appendChild(div);
+  });
+  const mb = total / 1024 / 1024;
+  $("fileTotal").textContent = attachedFiles.length
+    ? `${attachedFiles.length}개 · ${mb.toFixed(1)}MB${mb > 25 ? " ⚠️ 25MB 초과" : ""}` : "";
+}
+
+/* ===== 서명 (브라우저 저장) ===== */
+const SIG_KEY = "gmail_sender_signature";
+const savedSig = localStorage.getItem(SIG_KEY);
+if (savedSig !== null) { $("signature").value = savedSig; $("sigStatus").textContent = "저장된 서명 불러옴"; }
+$("saveSigBtn").onclick = () => { localStorage.setItem(SIG_KEY, $("signature").value); $("sigStatus").textContent = "저장됨 ✓"; };
+$("clearSigBtn").onclick = () => { $("signature").value = ""; localStorage.removeItem(SIG_KEY); $("sigStatus").textContent = "지움"; };
+
+/* ===== 로그 ===== */
+function logLine(html, cls) {
+  const log = $("log");
+  if (log.children.length === 1 && log.textContent.includes("진행 상황이")) log.innerHTML = "";
+  const div = document.createElement("div");
+  if (cls) div.className = cls;
+  div.innerHTML = html;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+/* ===== 발송 ===== */
+$("sendBtn").onclick = async () => {
+  const sender = $("sender").value.trim();
+  const password = $("password").value;
+  const emails = parseEmails($("recipients").value);
+  const bodyHtml = editor.innerHTML.trim();
+
+  if (!sender) return alert("Gmail 주소를 입력하세요.");
+  if (!password) return alert("앱 비밀번호를 입력하세요.");
+  if (emails.length === 0) return alert("받는 사람이 없습니다.");
+
+  let totalBytes = attachedFiles.reduce((s, f) => s + f.size, 0);
+  if (totalBytes > 25 * 1024 * 1024) return alert("첨부 용량이 25MB를 초과했습니다. 큰 파일은 드라이브 링크를 사용하세요.");
+
+  if (!confirm(`${emails.length}명에게 개별 메일을 보냅니다.\n각자 따로 받으며 서로의 주소는 보이지 않습니다.\n계속할까요?`)) return;
+
+  localStorage.setItem(SIG_KEY, $("signature").value);
+
+  const fd = new FormData();
+  fd.append("sender", sender);
+  fd.append("password", password);
+  fd.append("from_name", $("fromName").value);
+  fd.append("subject", $("subject").value);
+  fd.append("body_html", bodyHtml);
+  fd.append("signature", $("signature").value);
+  fd.append("recipients", $("recipients").value);
+  fd.append("delay", $("delay").value);
+  for (const f of attachedFiles) fd.append("attachments", f, f.name);
+
+  $("sendBtn").disabled = true;
+  $("sendBtn").textContent = "발송 중...";
+  $("log").innerHTML = "";
+  $("barFill").style.width = "0";
+
+  let total = 0, doneCount = 0;
+  try {
+    const res = await fetch("/send", { method: "POST", body: fd });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const ev = JSON.parse(line);
+        if (ev.type === "start") { total = ev.total; logLine(`총 ${total}명에게 발송합니다.${ev.note || ""}`, "muted"); }
+        else if (ev.type === "info") logLine(ev.msg, "muted");
+        else if (ev.type === "ok") { doneCount++; logLine(`[${ev.i}/${total}] ✅ ${ev.addr}`, "ok"); }
+        else if (ev.type === "fail") { doneCount++; logLine(`[${ev.i}/${total}] ❌ ${ev.addr} — ${ev.msg}`, "fail"); }
+        else if (ev.type === "error") logLine("⚠️ " + ev.msg, "fail");
+        else if (ev.type === "done") logLine(`\n완료 — 성공 ${ev.success}건, 실패 ${ev.fail}건`, "");
+        if (total) $("barFill").style.width = Math.round(doneCount / total * 100) + "%";
+      }
+    }
+  } catch (e) {
+    logLine("⚠️ 연결 오류: " + e, "fail");
+  } finally {
+    $("sendBtn").disabled = false;
+    $("sendBtn").textContent = "개별 발송 시작";
+  }
+};
+</script>
+</body>
+</html>
